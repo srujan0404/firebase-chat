@@ -16,7 +16,7 @@ export default function ChatRoom() {
   const [messages, setMessages] = useState([]);
 
   return (
-    <View style={{ flex: 1, backgroundColor: "white" }}>
+    <View style={{ flex: 1, backgroundColor: "black" }}>
       <StatusBar style="dark" />
       <ChatRooomHeader user={item} router={router} />
       <View
