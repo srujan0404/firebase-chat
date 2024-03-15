@@ -13,6 +13,7 @@ export default function CustomKeyboardView({children}) {
     >
         <ScrollView
             style={{flex: 1}}
+            contentContainerStyle={{flex: 1}}
             bounces={false}
             showsVerticalScrollIndicator={false}
         >
