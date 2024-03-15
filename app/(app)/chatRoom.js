@@ -19,7 +19,7 @@ import { Feather } from "@expo/vector-icons";
 // import {CustomKeyboardView} from "../../components/CustomKeyboardView";
 import { useAuth } from "../../context/authContext";
 import { getRoomId, getRoomIdId, getUserId } from "../../utils/common";
-import { Timestamp, addDoc, collection, doc, onSnapshot, setDoc } from "firebase/firestore";
+import { Timestamp, addDoc, collection, doc, onSnapshot, orderBy, query, setDoc } from "firebase/firestore";
 import { db } from "../../firebaseConfig";
 
 // Assuming "neutral" is defined elsewhere in your project
@@ -43,8 +43,9 @@ export default function ChatRoom() {
 
     let unsub = onSnapshot(q, (snapshot)=>{
       let allMessages = snapshot.docs.map(doc=>{
-        return {...doc.data(), id: doc.id}
+        return doc.data();
       });
+      setMessages([...allMessages]);
     }); 
     return unsub;
   }, []);
@@ -81,6 +82,7 @@ export default function ChatRoom() {
     }
   }
 
+  console.log("messages", messages);
   return (
     // <CustomKeyboardView>
       <View style={styles.container}>
@@ -89,7 +91,7 @@ export default function ChatRoom() {
         <View style={styles.separator} />
         <View style={styles.contentContainer}>
           <View style={styles.messageListContainer}>
-            <MessageList messages={messages} />
+            <MessageList messages={messages} currentUser={user}/>
           </View>
           <View style={styles.inputContainer}>
             <View style={styles.textInputContainer}>

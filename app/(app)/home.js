@@ -34,6 +34,22 @@ export default function Home() {
     setUsers(data);
   }
   
+    useEffect(() => {
+      createRoomIfNotExists();
+
+      let roomId = getRoomId(user?.userId, item?.userId);
+      const docRef = doc(db, "rooms", roomId);
+      const messagesRef = collection(docRef, "messages");
+      const q = query(messagesRef, orderBy("createdAt", "asc"));
+
+      let unsub = onSnapshot(q, (snapshot) => {
+        let allMessages = snapshot.docs.map((doc) => {
+          return doc.data();
+        });
+        setMessages([...allMessages]);
+      });
+      return unsub;
+    }, []);
 
   return (
     <View className="flex-1 bg-white">
