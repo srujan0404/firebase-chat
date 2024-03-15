@@ -1,13 +1,38 @@
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   widthPercentageToDP as wp,
   heightPercentageToDP as hp,
 } from "react-native-responsive-screen";
 import { Image } from "expo-image";
-import { blurhash } from "../utils/common";
+import { blurhash, formatDate, getRoomId } from "../utils/common";
+import { collection, doc, onSnapshot, orderBy, query } from "firebase/firestore";
+import { db } from "../firebaseConfig";
 
-const ChatItem = ({ item, router, noBorder }) => {
+const ChatItem = ({ item, router, noBorder, currentUser }) => {
+
+    const [lastMessage, setLastMessage] = useState(undefined);
+
+    useEffect(() => {
+      // createRoomIfNotExists();
+
+      let roomId = getRoomId(currentUser?.userId, item?.userId);
+      const docRef = doc(db, "rooms", roomId);
+      const messagesRef = collection(docRef, "messages");
+      const q = query(messagesRef, orderBy("createdAt", "desc"));
+
+      let unsub = onSnapshot(q, (snapshot) => {
+        let allMessages = snapshot.docs.map((doc) => {
+          return doc.data();
+        });
+        setLastMessage(allMessages[0]? allMessages[0] : null);
+      });
+      return unsub;
+    }, []);
+
+    // console.log("last Message: ", lastMessage);
+
+
   const containerStyle = [
     styles.container,
     noBorder && { borderBottomWidth: 0 },
@@ -16,6 +41,29 @@ const ChatItem = ({ item, router, noBorder }) => {
   const openChatRoom = () => {
     router.push({pathname: '/chatRoom', params: item});
   }
+
+  const renderTime = () => {
+    if(lastMessage){
+      let date = lastMessage?.createdAt;
+      return formatDate(new Date(date.seconds * 1000));
+    }
+  }
+
+  const renderLastMessage = () => {
+    if (typeof lastMessage === 'undefined') {
+      // Add code here
+      return "Loading...";
+    }
+    if(lastMessage){
+      if(currentUser?.userId == lastMessage?.userId)
+        return "You: " + lastMessage?.text;
+      else
+        return lastMessage?.text;
+    }else{
+      return "Say Hi 🙋‍♂️";
+    }
+  }
+
   return (
     <TouchableOpacity onPress={openChatRoom} style={containerStyle}>
       <Image source={{ uri: item?.profileUrl }} style={styles.avatar} placeholder={blurhash} transition={500} />
@@ -23,9 +71,9 @@ const ChatItem = ({ item, router, noBorder }) => {
       <View style={styles.infoContainer}>
         <View style={styles.nameTimeContainer}>
           <Text style={styles.nameText}>{item?.username}</Text>
-          <Text style={styles.timeText}>Time</Text>
+          <Text style={styles.timeText}>{renderTime()}</Text>
         </View>
-        <Text style={styles.lastMessageText}>Last Message</Text>
+        <Text style={styles.lastMessageText}>{renderLastMessage()}</Text>
       </View>
     </TouchableOpacity>
   );

@@ -4,7 +4,7 @@ import { FlatList } from 'react-native-gesture-handler'
 import ChatItem from './ChatItem'
 import { useRouter } from 'expo-router'
 
-export default function ChatList({users}) {
+export default function ChatList({users, currentUser}) {
 
   const router = useRouter();
 
@@ -21,6 +21,7 @@ export default function ChatList({users}) {
               router={router}  
               item={item} 
               index={index} 
+              currentUser={currentUser}
             />}
         />
     </View>

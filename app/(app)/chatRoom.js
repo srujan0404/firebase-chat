@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   Alert,
+  Keyboard,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
@@ -20,18 +21,19 @@ import { Feather } from "@expo/vector-icons";
 import { useAuth } from "../../context/authContext";
 import { getRoomId, getRoomIdId, getUserId } from "../../utils/common";
 import { Timestamp, addDoc, collection, doc, onSnapshot, orderBy, query, setDoc } from "firebase/firestore";
-import { db } from "../../firebaseConfig";
+import { db, usersRef } from "../../firebaseConfig";
 
 // Assuming "neutral" is defined elsewhere in your project
 const neutralColor = "#CCCCCC";
 
 export default function ChatRoom() {
   const item = useLocalSearchParams(); //second user
-  const {user} = useAuth(); // logged in user
+  const { user } = useAuth(); // logged in user
   const router = useRouter();
   const [messages, setMessages] = useState([]);
-  const textRef = useRef('');
+  const textRef = useRef("");
   const inputRef = useRef(null);
+  const scrollViewRef = useRef(null);
 
   useEffect(() => {
     createRoomIfNotExists();
@@ -41,73 +43,101 @@ export default function ChatRoom() {
     const messagesRef = collection(docRef, "messages");
     const q = query(messagesRef, orderBy("createdAt", "asc"));
 
-    let unsub = onSnapshot(q, (snapshot)=>{
-      let allMessages = snapshot.docs.map(doc=>{
+    let unsub = onSnapshot(q, (snapshot) => {
+      let allMessages = snapshot.docs.map((doc) => {
         return doc.data();
       });
       setMessages([...allMessages]);
-    }); 
-    return unsub;
+    });
+
+    const KeyboardDidShowListener = Keyboard.addListener(
+      'KeyboardDidShow', updateScrollView
+    )
+
+    return () => {
+      unsub();
+      KeyboardDidShowListener.remove();
+    }
+
+    // return unsub;
   }, []);
+
+
+  useEffect(() => {
+    updateScrollView();
+  }, [messages]);
+
+  const updateScrollView = () => {
+    setTimeout(() => {
+      scrollViewRef?.current?.scrollToEnd({ animated: true });
+    }, 200);
+  };
 
   const createRoomIfNotExists = async () => {
     let roomId = getRoomId(user?.userId, item?.userId);
     await setDoc(doc(db, "rooms", roomId), {
-      roomId, 
+      roomId,
       createdAt: Timestamp.fromDate(new Date()),
     });
-  }
+  };
 
   const handleSendMessage = async () => {
     let message = textRef.current.trim();
-    if(message === '') return;
+    if (message === "") return;
     try {
       let roomId = getRoomId(user?.userId, item?.userId);
       const docRef = doc(db, "rooms", roomId);
       const messageRef = collection(docRef, "messages");
-      textRef.current = '';
-      if(inputRef) inputRef?.current?.clear();
+      textRef.current = "";
+      if (inputRef) inputRef?.current?.clear();
 
       const newDoc = await addDoc(messageRef, {
         userId: user?.userId,
         text: message,
         profileUrl: user?.profileUrl,
         senderName: user?.username,
-        createdAt: Timestamp.fromDate(new Date())
+        createdAt: Timestamp.fromDate(new Date()),
       });
 
       console.log("Document written with ID: ", newDoc.id);
     } catch (err) {
       Alert.alert("Error", err.message);
     }
-  }
+  };
 
   console.log("messages", messages);
   return (
     // <CustomKeyboardView>
-      <View style={styles.container}>
-        <StatusBar style="black" />
-        <ChatRoomHeader user={item} router={router} />
-        <View style={styles.separator} />
-        <View style={styles.contentContainer}>
-          <View style={styles.messageListContainer}>
-            <MessageList messages={messages} currentUser={user}/>
-          </View>
-          <View style={styles.inputContainer}>
-            <View style={styles.textInputContainer}>
-              <TextInput
-                ref={inputRef}
-                onChangeText={value=>textRef.current = value}
-                placeholder="Type a message"
-                style={styles.textInput}
-              />
-              <TouchableOpacity onPress={handleSendMessage}  style={styles.sendButton}>
-                <Feather name="send" size={hp(2.7)} color="#737373" />
-              </TouchableOpacity>
-            </View>
+    <View style={styles.container}>
+      <StatusBar style="black" />
+      <ChatRoomHeader user={item} router={router} />
+      <View style={styles.separator} />
+      <View style={styles.contentContainer}>
+        <View style={styles.messageListContainer}>
+          <MessageList
+            scrollViewRef={scrollViewRef}
+            messages={messages}
+            currentUser={user}
+          />
+        </View>
+        <View style={styles.inputContainer}>
+          <View style={styles.textInputContainer}>
+            <TextInput
+              ref={inputRef}
+              onChangeText={(value) => (textRef.current = value)}
+              placeholder="Type a message"
+              style={styles.textInput}
+            />
+            <TouchableOpacity
+              onPress={handleSendMessage}
+              style={styles.sendButton}
+            >
+              <Feather name="send" size={hp(2.7)} color="#737373" />
+            </TouchableOpacity>
           </View>
         </View>
       </View>
+    </View>
     // </CustomKeyboardView>
   );
 }

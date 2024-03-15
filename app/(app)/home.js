@@ -34,29 +34,14 @@ export default function Home() {
     setUsers(data);
   }
   
-    useEffect(() => {
-      createRoomIfNotExists();
 
-      let roomId = getRoomId(user?.userId, item?.userId);
-      const docRef = doc(db, "rooms", roomId);
-      const messagesRef = collection(docRef, "messages");
-      const q = query(messagesRef, orderBy("createdAt", "asc"));
-
-      let unsub = onSnapshot(q, (snapshot) => {
-        let allMessages = snapshot.docs.map((doc) => {
-          return doc.data();
-        });
-        setMessages([...allMessages]);
-      });
-      return unsub;
-    }, []);
-
+  
   return (
     <View className="flex-1 bg-white">
       <StatusBar style='light'/>
       {
         users.length > 0 ? (
-          <ChatList users={users}/>
+          <ChatList currentUser={user} users={users}/>
         ) : (
           <View className="flex items-center" style= {{top: hp(30)}}>
             <ActivityIndicator size='large'/>
